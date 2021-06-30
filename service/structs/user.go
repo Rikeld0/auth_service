@@ -5,6 +5,12 @@ import (
 	"encoding/hex"
 )
 
+type Cl struct {
+	Exp int64  `json:"exp"`
+	Iat int64  `json:"iat"`
+	Iss string `json:"iss"`
+}
+
 type User struct {
 	Uuid     string
 	Email    string

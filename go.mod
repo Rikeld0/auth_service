@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.6.2+incompatible
+	github.com/jackc/pgx/v4 v4.11.0 // indirect
 	github.com/lestrrat-go/jwx v1.2.1
 	github.com/lib/pq v1.10.2 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
