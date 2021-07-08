@@ -16,11 +16,22 @@ type Users interface {
 	GetUserId(ctx context.Context, uuid string) (*structs.User, error)
 	// InsertUser добавить пользователя
 	InsertUser(ctx context.Context, user *structs.User) (string, error)
+	// SaveUserIDAndIP запоминаем связку id пользователя и ip адрес устройства ????
+	SaveUserIDAndIP(ctx context.Context, uuid, ip string) error
+	// FindUserId ищем пользователя по ip адрессу
+	FindUserId(ctx context.Context, ip string) (string, error)
 }
 
 type UsersKey interface {
-	// Get получить ключи для пользователя
+	// Get получаем ecdsa ключи и генерируем пользовательские
 	Get(ctx context.Context, uuid string) (*structs.UserKey, error)
-	// Put положить ключи в базу
-	Put(ctx context.Context, uuid string, priv, pub string) error
+	// Put генерируем и кладем в базу ключи ecdsa
+	Put(ctx context.Context, uuid string) error
+}
+
+type Jwt interface {
+	// Generate генерация токен
+	Generate(uuid string, keys *structs.UserKey) (*structs.JWT, error)
+	// Validate проверка токена
+	Validate(token string, keys *structs.UserKey) error
 }

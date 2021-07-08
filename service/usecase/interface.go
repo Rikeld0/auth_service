@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"auth/pkg/myJwt"
 	"auth/service/structs"
 	"context"
 )
@@ -13,7 +12,9 @@ type Auth interface {
 
 type User interface {
 	Auth
-	SignIn(ctx context.Context, user *structs.User) (*myJwt.JWT, error)
+	// SignIn найти уч запись
+	SignIn(ctx context.Context, user *structs.User) (*structs.JWT, error)
+	// SignUp добавить уч запись
 	SignUp(ctx context.Context, user *structs.User) error
 	GetMsg(ctx context.Context) (string, error)
 }

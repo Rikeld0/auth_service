@@ -1,48 +1,51 @@
 package repo
 
 import (
-	_interface "auth/pkg/connector_db/interface"
+	"auth/pkg/connector_db"
 	"auth/pkg/gen_key"
 	"auth/service/structs"
 	"context"
+	"encoding/json"
+	"strings"
 )
 
-const (
-	userKeyQueryGet = `SELECT * FROM main.userkey `
-)
+const prefixKey = "UserKey"
 
 type userKR struct {
-	conn _interface.DB
+	rClient connector_db.Redis
 }
 
-func NewUserKR(conn _interface.DB) UsersKey {
-	return &userKR{conn: conn}
-}
-
-type keys struct {
-	uuid string
-	priv string
-	pub  string
-}
-
-func (u *userKR) parse(rows row) (*structs.UserKey, error) {
-	out := &keys{}
-	err := rows.Scan(
-		&out.uuid,
-		&out.priv,
-		&out.pub,
-	)
-	if err != nil {
-		return nil, err
+func NewUserKR(rClient connector_db.Redis) UsersKey {
+	return &userKR{
+		rClient: rClient,
 	}
-	return gen_key.GenUserKey(out.uuid, []byte(out.priv), []byte(out.pub))
+}
+
+type keysStruct struct {
+	priv []byte
+	pub  []byte
 }
 
 func (u *userKR) Get(ctx context.Context, uuid string) (*structs.UserKey, error) {
-	return u.parse(u.conn.QueryRow(ctx, userKeyQueryGet+`WHERE uuid_my=$1`, uuid))
+	var keys *keysStruct
+	keysB, err := u.rClient.Get(strings.Join([]string{prefixKey, uuid}, "/")).Bytes()
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(keysB, &keys)
+	return gen_key.GenUserKey(uuid, keys.priv, keys.pub)
 }
 
-func (u *userKR) Put(ctx context.Context, uuid string, priv, pub string) error {
-	return u.conn.Exec(ctx, `INSERT INTO main.userkey (uuid_my, priv, pub) VALUES ($1, $2, $3)`, uuid, priv, pub)
+func (u *userKR) Put(ctx context.Context, uuid string) error {
+	priv, pub := gen_key.GenEcdsaKey()
+	keys := &keysStruct{
+		priv: priv,
+		pub:  pub,
+	}
+	keysB, err := json.Marshal(keys)
+	if err != nil {
+		return err
+	}
+	return u.rClient.Set(strings.Join([]string{prefixKey, uuid}, "/"), keysB, 0).Err()
 
 }

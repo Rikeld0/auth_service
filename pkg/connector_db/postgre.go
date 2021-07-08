@@ -1,17 +1,17 @@
-package postgre
+package connector_db
 
 import (
-	"auth/pkg/connector_db/interface"
 	"context"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"log"
 )
 
 type connPosgres struct {
 	conn *pgxpool.Pool
 }
 
-func NewPostreConn(conn *pgxpool.Pool) _interface.DB {
+func NewPostreConn(conn *pgxpool.Pool) Postgre {
 	c := &connPosgres{
 		conn: conn,
 	}
@@ -35,4 +35,13 @@ func (c *connPosgres) QueryRow(ctx context.Context, query string, args ...interf
 
 func (c *connPosgres) Close() {
 	c.conn.Close()
+}
+
+func ConnPostger(config string) Postgre {
+	connConfig, _ := pgxpool.ParseConfig(config)
+	conn, err := pgxpool.ConnectConfig(context.Background(), connConfig)
+	if err != nil {
+		log.Fatal("error:", err)
+	}
+	return NewPostreConn(conn)
 }

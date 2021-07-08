@@ -13,12 +13,6 @@ import (
 	"time"
 )
 
-//go:embed key/ecprivkey.pem
-var ecprivkey []byte
-
-//go:embed key/ecpubkey.pem
-var ecpubkey []byte
-
 type JWT struct {
 	AccessToken  string
 	RefreshToken string
@@ -32,10 +26,11 @@ func tokenBytetoString(t []byte, err error) string {
 	return string(t)
 }
 
-func GenerateJWT(id string, keys *structs.UserKey) (*JWT, error) {
+func GenerateJWT(uuid, jti string, keys *structs.UserKey) (*JWT, error) {
 	jt := &JWT{}
 	tokenAccess := jwt.New()
-	_ = tokenAccess.Set(jwt.IssuerKey, id)
+	_ = tokenAccess.Set(jwt.IssuerKey, uuid)
+	_ = tokenAccess.Set(jwt.JwtIDKey, jti)
 	_ = tokenAccess.Set(jwt.IssuedAtKey, time.Now().Unix())
 	_ = tokenAccess.Set(jwt.ExpirationKey, time.Now().Add(time.Minute*20).Unix())
 	buf, err := json.Marshal(tokenAccess)
@@ -57,17 +52,16 @@ func GenerateJWT(id string, keys *structs.UserKey) (*JWT, error) {
 	return jt, nil
 }
 
-func VerefyJWT(token string, keys *structs.UserKey) (string, error) {
+func VerefyJWT(token string, keys *structs.UserKey) ([]byte, error) {
 	verified, err := jws.Verify([]byte(token), jwa.ES256, keys.PublicKey)
 	if err != nil {
 		log.Printf("failed to verify message: %s", err)
-		return "", err
+		return nil, err
 	}
 	claims, err := jwe.Decrypt(verified, jwa.ECDH_ES, keys.PrivateKey)
 	if err != nil {
 		log.Printf("failed to decrypt: %s", err)
-		return "", err
+		return nil, err
 	}
-	//fmt.Println(string(decrypted))
-	return string(claims), nil
+	return claims, nil
 }

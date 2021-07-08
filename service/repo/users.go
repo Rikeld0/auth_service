@@ -1,41 +1,30 @@
 package repo
 
 import (
-	_interface "auth/pkg/connector_db/interface"
+	"auth/pkg/connector_db"
 	"auth/pkg/uuid_my"
 	"auth/service/structs"
-	"bytes"
 	"context"
-	"encoding/gob"
 	"errors"
+	"io"
 	"strconv"
 	"strings"
 )
 
 const (
-	token     = "user"
 	userQuery = `SELECT uuid_my, email, name FROM main.users `
+	prefixUIP = "UserIP"
 )
 
-func getUserCTX(ctx context.Context) (*structs.User, error) {
-	buf, ok := ctx.Value(token).([]byte)
-	if !ok {
-		return nil, errors.New("no user")
-	}
-	out := &structs.User{}
-	if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(out); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 type userR struct {
-	conn _interface.DB
+	conn    connector_db.Postgre
+	rCliebt connector_db.Redis
 }
 
-func NewUserDB(conn _interface.DB) Users {
+func NewUserDB(conn connector_db.Postgre, rCliebt connector_db.Redis) Users {
 	u := &userR{
-		conn: conn,
+		conn:    conn,
+		rCliebt: rCliebt,
 	}
 	return u
 }
@@ -81,6 +70,21 @@ func (u *userR) InsertUser(ctx context.Context, user *structs.User) (string, err
 	var uuid string
 	err := u.conn.QueryRow(ctx, `INSERT INTO main.users (`+strings.Join(sqlArr, ",")+`) VALUES (`+strings.Join(v, ",")+`) RETURNING uuid`, arg...).Scan(&uuid)
 	if err != nil {
+		return "", err
+	}
+	return uuid, nil
+}
+
+func (u *userR) SaveUserIDAndIP(ctx context.Context, uuid, ip string) error {
+	return u.rCliebt.Set(strings.Join([]string{prefixUIP, ip}, "/"), uuid, 0).Err()
+}
+
+func (u *userR) FindUserId(ctx context.Context, ip string) (string, error) {
+	uuid, err := u.rCliebt.Get(strings.Join([]string{prefixUIP, ip}, "/")).Result()
+	if err != nil {
+		if err == io.EOF {
+			return "", errors.New("client not found")
+		}
 		return "", err
 	}
 	return uuid, nil

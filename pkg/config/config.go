@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"unsafe"
 )
@@ -30,13 +31,30 @@ func init() {
 }
 
 type config struct {
-	DBHost string `name:"PG_HOST" default:"127.0.0.1"`
-	DBPort string `name:"PG_PORT" default:"5432"`
-	DBName string `name:"PG_NAME" default:"test"`
-	DBUser string `name:"PG_USER" default:"postgres"`
-	DBPass string `name:"PG_PASS" default:"root"`
+	DBHost    string `name:"PG_HOST" default:"127.0.0.1"`
+	DBPort    string `name:"PG_PORT" default:"5432"`
+	DBName    string `name:"PG_NAME" default:"test"`
+	DBUser    string `name:"PG_USER" default:"postgres"`
+	DBPass    string `name:"PG_PASS" default:"root"`
+	RedisHost string `name:"REDIS_HOST" default:"127.0.0.1"`
+	RedisPort string `name:"REDIS_PORT" default:"6379"`
+	RedisPass string `name:"REDIS_PASS" default:""`
+	RedisDB   string `name:"REDIS_DB" default:"0"`
 }
 
 func ConnInfo() string {
 	return `host= ` + c.DBHost + ` port = ` + c.DBPort + ` dbname = ` + c.DBName + ` user =` + c.DBUser + ` password = ` + c.DBPass + ` sslmode = disable`
+}
+
+func RedisAddr() string {
+	return strings.Join([]string{c.RedisHost + c.RedisPort}, ":")
+}
+
+func RedisPass() string {
+	return c.RedisPass
+}
+
+func RedisDB() int {
+	db, _ := strconv.Atoi(c.RedisDB)
+	return db
 }

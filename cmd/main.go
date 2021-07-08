@@ -7,6 +7,7 @@ import (
 	"auth/service/repo"
 	"auth/service/usecase"
 	"context"
+	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"log"
@@ -17,11 +18,20 @@ import (
 )
 
 func main() {
-	conn := connector_db.Open("postgre", config.ConnInfo())
-	defer conn.Close()
-	userR := repo.NewUserDB(conn)
-	userKR := repo.NewUserKR(conn)
-	userS := usecase.NewUserService(userR, userKR)
+	conn := connector_db.ConnPostger(config.ConnInfo())
+	connRedis := connector_db.ConnRedis(&redis.Options{
+		Addr:     config.RedisAddr(),
+		Password: config.RedisPass(),
+		DB:       config.RedisDB(),
+	})
+	defer func() {
+		conn.Close()
+		_ = connRedis.Close()
+	}()
+	userR := repo.NewUserDB(conn, connRedis)
+	userKR := repo.NewUserKR(connRedis)
+	jwtU := repo.NewJwtRepo(connRedis)
+	userS := usecase.NewUserService(userR, userKR, jwtU)
 	h := handler.NewHandler(userS)
 	r := mux.NewRouter()
 	r.HandleFunc("/registration", h.RegHandler).Methods("POST")

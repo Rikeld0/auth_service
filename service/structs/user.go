@@ -7,6 +7,7 @@ import (
 
 type Cl struct {
 	Exp int64  `json:"exp"`
+	Jti string `json:"jti"`
 	Iat int64  `json:"iat"`
 	Iss string `json:"iss"`
 }

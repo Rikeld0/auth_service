@@ -1,12 +1,9 @@
 package usecase
 
 import (
-	"auth/pkg/gen_key"
-	"auth/pkg/myJwt"
 	"auth/service/repo"
 	"auth/service/structs"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,9 +11,6 @@ import (
 )
 
 const token = "user"
-
-var tokenUser = map[string]string{}
-var userIP = map[string]string{}
 
 func NewUserValue(ctx context.Context) (*structs.User, error) {
 	buf, ok := ctx.Value(token).(*structs.User)
@@ -35,14 +29,16 @@ func ReqValue(ctx context.Context) (*http.Request, error) {
 }
 
 type userService struct {
-	repoU  repo.Users
-	repoUK repo.UsersKey
+	repoU   repo.Users
+	repoUK  repo.UsersKey
+	repoJwt repo.Jwt
 }
 
-func NewUserService(repoU repo.Users, repoUK repo.UsersKey) User {
+func NewUserService(repoU repo.Users, repoUK repo.UsersKey, repoJwt repo.Jwt) User {
 	return &userService{
-		repoU:  repoU,
-		repoUK: repoUK,
+		repoU:   repoU,
+		repoUK:  repoUK,
+		repoJwt: repoJwt,
 	}
 }
 
@@ -63,9 +59,9 @@ func (u *userService) Auth(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	uuid, ok := userIP[r.RemoteAddr]
-	if !ok {
-		return nil, errors.New("error ip")
+	uuid, err := u.repoU.FindUserId(ctx, r.RemoteAddr)
+	if err != nil {
+		return nil, err
 	}
 	keys, err := u.repoUK.Get(ctx, uuid)
 	c := structs.Cl{}
@@ -73,38 +69,28 @@ func (u *userService) Auth(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	claims, err := myJwt.VerefyJWT(token, keys)
+	err = u.repoJwt.Validate(token, keys)
 	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal([]byte(claims), &c)
-	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 	usr, err := u.repoU.GetUserId(ctx, c.Iss)
+	//TODO: сделать проверку жизни токена
 	return context.WithValue(r.Context(), "user", usr), nil
 }
 
 func (u *userService) SignUp(ctx context.Context, user *structs.User) error {
-	r, err := ReqValue(ctx)
-	if err != nil {
-		return err
-	}
 	uuid, err := u.repoU.InsertUser(ctx, user)
 	if err != nil {
 		return err
 	}
-	userIP[r.RemoteAddr] = uuid
-	priv, pub := gen_key.GenKey()
-	err = u.repoUK.Put(ctx, uuid, string(priv), string(pub))
+	err = u.repoUK.Put(ctx, uuid)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (u *userService) SignIn(ctx context.Context, user *structs.User) (*myJwt.JWT, error) {
+func (u *userService) SignIn(ctx context.Context, user *structs.User) (*structs.JWT, error) {
 	r, err := ReqValue(ctx)
 	if err != nil {
 		return nil, err
@@ -113,14 +99,15 @@ func (u *userService) SignIn(ctx context.Context, user *structs.User) (*myJwt.JW
 	if err != nil {
 		return nil, err
 	}
-	userIP[r.RemoteAddr] = usr.Uuid
+	if err = u.repoU.SaveUserIDAndIP(ctx, usr.Uuid, r.RemoteAddr); err != nil {
+		return nil, err
+	}
 	keys, err := u.repoUK.Get(ctx, usr.Uuid)
-	jwtToken, err := myJwt.GenerateJWT(usr.Uuid, keys)
+	jwtToken, err := u.repoJwt.Generate(usr.Uuid, keys)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
-	//tokenUser[usr.Uuid] = jwtToken.AccessToken
 	return jwtToken, nil
 }
 
