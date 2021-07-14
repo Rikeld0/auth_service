@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	userQuery = `SELECT uuid_my, email, name FROM main.users `
+	userQuery = `SELECT uuid, email, name FROM main.users `
 	prefixUIP = "UserIP"
 )
 
@@ -44,7 +44,7 @@ func (u *userR) Get(ctx context.Context, email, pass string) (*structs.User, err
 }
 
 func (u *userR) GetUserId(ctx context.Context, uuid string) (*structs.User, error) {
-	return u.parse(u.conn.QueryRow(ctx, userQuery+`WHERE uuid_my=$1`, uuid))
+	return u.parse(u.conn.QueryRow(ctx, userQuery+`WHERE uuid=$1`, uuid))
 }
 
 func (u *userR) InsertUser(ctx context.Context, user *structs.User) (string, error) {
@@ -53,7 +53,7 @@ func (u *userR) InsertUser(ctx context.Context, user *structs.User) (string, err
 		arg    []interface{}
 	)
 	sqlArr = append(sqlArr, strconv.Quote(`uuid`))
-	arg = append(arg, uuid_my.GenerateNameUUID(user.Name))
+	arg = append(arg, uuid_my.GenerateUUID())
 	sqlArr = append(sqlArr, strconv.Quote(`email`))
 	arg = append(arg, user.Email)
 	sqlArr = append(sqlArr, strconv.Quote(`name`))
@@ -63,6 +63,8 @@ func (u *userR) InsertUser(ctx context.Context, user *structs.User) (string, err
 	}
 	sqlArr = append(sqlArr, strconv.Quote(`password`))
 	arg = append(arg, structs.HexPassword(user.Password))
+	sqlArr = append(sqlArr, strconv.Quote(`rights`))
+	arg = append(arg, user.Rights)
 	v := make([]string, 0, len(sqlArr))
 	for i := range sqlArr {
 		v = append(v, "$"+strconv.Itoa(i+1))
@@ -88,4 +90,19 @@ func (u *userR) FindUserId(ctx context.Context, ip string) (string, error) {
 		return "", err
 	}
 	return uuid, nil
+}
+
+func (u *userR) DelUserIDAndIP(ctx context.Context, uuid, ip string) error {
+	uuidR, err := u.rCliebt.Get(strings.Join([]string{prefixUIP, ip}, "/")).Result()
+	if err != nil {
+		if err == io.EOF {
+			return errors.New("client not found")
+		}
+		return err
+	}
+	if uuid == uuidR {
+		return u.rCliebt.Del(ip)
+	} else {
+		return errors.New("err uuid")
+	}
 }

@@ -40,6 +40,8 @@ type config struct {
 	RedisPort string `name:"REDIS_PORT" default:"6379"`
 	RedisPass string `name:"REDIS_PASS" default:""`
 	RedisDB   string `name:"REDIS_DB" default:"0"`
+	Host      string `name:"HOST" default:"127.0.0.1"`
+	Port      string `name:"PORT" default:"8080"`
 }
 
 func ConnInfo() string {
@@ -47,7 +49,7 @@ func ConnInfo() string {
 }
 
 func RedisAddr() string {
-	return strings.Join([]string{c.RedisHost + c.RedisPort}, ":")
+	return strings.Join([]string{c.RedisHost, c.RedisPort}, ":")
 }
 
 func RedisPass() string {
@@ -57,4 +59,8 @@ func RedisPass() string {
 func RedisDB() int {
 	db, _ := strconv.Atoi(c.RedisDB)
 	return db
+}
+
+func HostServer() string {
+	return strings.Join([]string{c.Host, c.Port}, ":")
 }

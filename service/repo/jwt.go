@@ -42,22 +42,22 @@ func (j *jwtRepo) Generate(uuid string, keys *structs.UserKey) (*structs.JWT, er
 	return &structs.JWT{AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken}, nil
 }
 
-func (j *jwtRepo) Validate(token string, keys *structs.UserKey) error {
+func (j *jwtRepo) Validate(token string, keys *structs.UserKey) ([]byte, error) {
 	claims, err := myJwt.VerefyJWT(token, keys)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	c := structs.Cl{}
 	err = json.Unmarshal(claims, &c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_, err = j.rClient.Get(strings.Join([]string{perfixJU, c.Iss}, "/")).Result()
 	if err != nil {
 		if err == io.EOF {
-			return err
+			return nil, err
 		}
-		return err
+		return nil, err
 	}
-	return nil
+	return claims, nil
 }

@@ -22,8 +22,8 @@ func NewUserKR(rClient connector_db.Redis) UsersKey {
 }
 
 type keysStruct struct {
-	priv []byte
-	pub  []byte
+	Priv []byte `json:"priv"`
+	Pub  []byte `json:"pub"`
 }
 
 func (u *userKR) Get(ctx context.Context, uuid string) (*structs.UserKey, error) {
@@ -33,14 +33,17 @@ func (u *userKR) Get(ctx context.Context, uuid string) (*structs.UserKey, error)
 		return nil, err
 	}
 	err = json.Unmarshal(keysB, &keys)
-	return gen_key.GenUserKey(uuid, keys.priv, keys.pub)
+	if err != nil {
+		return nil, err
+	}
+	return gen_key.GenUserKey(uuid, keys.Priv, keys.Pub)
 }
 
 func (u *userKR) Put(ctx context.Context, uuid string) error {
 	priv, pub := gen_key.GenEcdsaKey()
 	keys := &keysStruct{
-		priv: priv,
-		pub:  pub,
+		Priv: priv,
+		Pub:  pub,
 	}
 	keysB, err := json.Marshal(keys)
 	if err != nil {

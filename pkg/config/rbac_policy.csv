@@ -1,0 +1,7 @@
+p, user, resource, read
+p, admin, resource, read
+p, admin, resource, write
+p, admin, resource1, read
+p, admin, resource1, write
+g, ivan, admin
+g, bob, user

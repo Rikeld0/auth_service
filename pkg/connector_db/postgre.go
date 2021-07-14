@@ -37,11 +37,12 @@ func (c *connPosgres) Close() {
 	c.conn.Close()
 }
 
-func ConnPostger(config string) Postgre {
+func ConnPostger(config string) (Postgre, error) {
 	connConfig, _ := pgxpool.ParseConfig(config)
 	conn, err := pgxpool.ConnectConfig(context.Background(), connConfig)
 	if err != nil {
 		log.Fatal("error:", err)
+		return nil, err
 	}
-	return NewPostreConn(conn)
+	return NewPostreConn(conn), nil
 }

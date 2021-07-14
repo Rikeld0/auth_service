@@ -4,6 +4,7 @@ import (
 	"auth/service/repo"
 	"auth/service/structs"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -69,10 +70,11 @@ func (u *userService) Auth(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = u.repoJwt.Validate(token, keys)
+	claims, err := u.repoJwt.Validate(token, keys)
 	if err != nil {
 		return nil, err
 	}
+	err = json.Unmarshal(claims, &c)
 	usr, err := u.repoU.GetUserId(ctx, c.Iss)
 	//TODO: сделать проверку жизни токена
 	return context.WithValue(r.Context(), "user", usr), nil
@@ -99,6 +101,10 @@ func (u *userService) SignIn(ctx context.Context, user *structs.User) (*structs.
 	if err != nil {
 		return nil, err
 	}
+	//TODO: подумать над проверкой пароля
+	//if ok := structs.CheckPass(usr.Password, user.Password); !ok {
+	//	return nil, errors.New("password not valid")
+	//}
 	if err = u.repoU.SaveUserIDAndIP(ctx, usr.Uuid, r.RemoteAddr); err != nil {
 		return nil, err
 	}
@@ -111,16 +117,27 @@ func (u *userService) SignIn(ctx context.Context, user *structs.User) (*structs.
 	return jwtToken, nil
 }
 
-func (u *userService) GetMsg(ctx context.Context) (string, error) {
+func (u *userService) SignOut(ctx context.Context) error {
 	usr, err := NewUserValue(ctx)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	r, err := ReqValue(ctx)
+	if err != nil {
+		return err
+	}
+	if err = u.repoU.DelUserIDAndIP(ctx, usr.Uuid, r.RemoteAddr); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *userService) GetMsg(ctx context.Context) (string, error) {
+	_, err := NewUserValue(ctx)
 	if err != nil {
 		fmt.Println(err)
 		return "", err
 	}
-	_ = usr
-	//if _, ok := tokenUser[usr.Uuid]; !ok {
-	//	fmt.Println("no")
-	//	return "", errors.New("")
-	//}
 	return "hello", nil
 }

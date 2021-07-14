@@ -12,9 +12,11 @@ type Auth interface {
 
 type User interface {
 	Auth
-	// SignIn найти уч запись
+	// SignIn найти пользователя
 	SignIn(ctx context.Context, user *structs.User) (*structs.JWT, error)
-	// SignUp добавить уч запись
+	// SignUp добавить пользователя
 	SignUp(ctx context.Context, user *structs.User) error
+	// SignOut выход из системы
+	SignOut(ctx context.Context) error
 	GetMsg(ctx context.Context) (string, error)
 }

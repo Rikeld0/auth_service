@@ -23,6 +23,10 @@ func (m *myRedis) Set(key string, value interface{}, expiration time.Duration) *
 	return m.rClient.Set(key, value, expiration)
 }
 
+func (m *myRedis) Del(key string) error {
+	return m.rClient.Del(key).Err()
+}
+
 func (m *myRedis) Close() error {
 	return m.rClient.Close()
 }

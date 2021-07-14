@@ -17,5 +17,6 @@ type Postgre interface {
 type Redis interface {
 	Get(key string) *redis.StringCmd
 	Set(key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	Del(key string) error
 	Close() error
 }
